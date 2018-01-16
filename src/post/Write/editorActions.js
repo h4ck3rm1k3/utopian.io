@@ -7,13 +7,18 @@ import { jsonParse } from '../../helpers/formatter';
 import { createPermlink, getBodyPatchIfSmaller } from '../../vendor/steemitHelpers';
 
 // @UTOPIAN
-import { createContribution, updateContribution } from '../../actions/contribution';
+import { createContribution, updateContribution, editContribution } from '../../actions/contribution';
 import sc2 from '../../sc2';
 
 export const CREATE_POST = '@editor/CREATE_POST';
 export const CREATE_POST_START = '@editor/CREATE_POST_START';
 export const CREATE_POST_SUCCESS = '@editor/CREATE_POST_SUCCESS';
 export const CREATE_POST_ERROR = '@editor/CREATE_POST_ERROR';
+
+export const UPDATE_POST = '@editor/UPDATE_POST';
+export const UPDATE_POST_START = '@editor/UPDATE_POST_START';
+export const UPDATE_POST_SUCCESS = '@editor/UPDATE_POST_SUCCESS';
+export const UPDATE_POST_ERROR = '@editor/UPDATE_POST_ERROR';
 
 export const NEW_POST = '@editor/NEW_POST';
 export const newPost = createAction(NEW_POST);
@@ -166,6 +171,8 @@ export function createPost(postData) {
 
     console.log("POST DATA", postData);
 
+    if (isUpdating) {updatePost(postData); return;}
+
     const getPermLink = isUpdating
       ? Promise.resolve(postData.permlink)
       : createPermlink(title, author, parentAuthor, parentPermlink);
@@ -213,6 +220,76 @@ export function createPost(postData) {
                     push(`/${parentPermlink}/@${author}/${permlink}`)
                   ));
                 }
+
+                if (window.ga) {
+                  window.ga('send', 'event', 'post', 'submit', '', 10);
+                }
+
+                return result;
+              }
+            })
+          }
+        ),
+      },
+    });
+  };
+}
+
+export function updatePost(postData) {
+  requiredFields.forEach((field) => {
+    assert(postData[field] != null, `Developer Error: Missing required field ${field}`);
+  });
+
+  return (dispatch) => {
+    const {
+      parentAuthor,
+      parentPermlink,
+      author,
+      title,
+      body,
+      jsonMetadata,
+      reward,
+      draftId,
+      isUpdating,
+      extensions,
+    } = postData;
+
+    console.log("POST DATA", postData);
+
+    if (!isUpdating) {createPost(postData); return;}
+
+    const getPermLink = isUpdating
+      ? Promise.resolve(postData.permlink)
+      : createPermlink(title, author, parentAuthor, parentPermlink);
+      
+    
+    const newBody = getBodyPatchIfSmaller(postData.originalBody, body);
+    const newPost = {
+      parentAuthor,
+      parentPermlink,
+      author,
+      title,
+      newBody,
+      jsonMetadata,
+      permlink,
+    }
+
+    dispatch({
+      type: UPDATE_POST,
+      payload: {
+        promise: getPermLink.then(permlink => {
+            
+
+            return editContribution(newPost.author, newPost.permlink, newPost).then(result => {
+
+              if (result) {
+
+                if (draftId) {
+                  dispatch(deleteDraft(draftId));
+                  dispatch(addEditedPost(permlink));
+                }
+
+                push(`/${parentPermlink}/@${author}/${permlink}`)
 
                 if (window.ga) {
                   window.ga('send', 'event', 'post', 'submit', '', 10);

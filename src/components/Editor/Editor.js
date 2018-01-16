@@ -968,7 +968,7 @@ class Editor extends React.Component {
                       disabled={loading}
                       text={intl.formatMessage({
                         id: loading ? 'post_send_progress' : 'post_send',
-                        defaultMessage: loading ? 'Submitting' : 'Post',
+                        defaultMessage: loading ? 'Submitting' : 'Submit Contribution',
                       })}
                     />
                   )}

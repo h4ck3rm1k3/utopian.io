@@ -120,6 +120,35 @@ class Topnav extends React.Component {
     }
   }
 
+  componentDidMount() {
+    const firefoxBugFix = () => {
+      if (document.getElementById("Topnav__new-contribution-id")) {
+        document.getElementById("Topnav__new-contribution-id")
+        .onclick = () => {
+          window.location.href = "/write";
+          /*
+          NOTE BY @mooncryption (Steem, Github):
+            This code fixes a bug in Firefox, Waterfox, and other Mozilla-based browsers
+            causing the `+ Contribution` new contribution button to fail and not properly link.
+          */
+        }
+
+        
+      } else {
+        setTimeout(this, 100);
+      }
+      let x = document.getElementsByClassName("Topnav__item-write-new");
+      if (x && x.length) {
+        x[0].onclick = () => {
+          window.location.href="/write";
+        }
+      }
+    }
+    setTimeout(firefoxBugFix, 50);
+    setTimeout(firefoxBugFix, 500);
+    setInterval(firefoxBugFix, 125);
+  }
+
   renderSearch () {
     const { history, location } = this.props;
 
@@ -178,6 +207,12 @@ class Topnav extends React.Component {
 
     let content;
 
+    const redirectToWrite = () => {
+      console.log("REDIRECTING TO /write ...");
+      window.location.href = "/write";
+      const redirected = () => { return window.location.href.indexOf("/write") > -1; };
+    }
+
     const notificationsCount =
       notifications && notifications.filter(notification => !notification.read).length;
 
@@ -187,8 +222,8 @@ class Topnav extends React.Component {
       content = (
         <div className="Topnav__menu-container">
           <Menu selectedKeys={[]} className="Topnav__menu-container__menu" mode="horizontal">
-            <Menu.Item key="write" className="Topnav__item-write-new nobottom">
-              <Action primary={true} cozy={true} style={{ margin: '3px 0' }} 
+            <Menu.Item key="write" className="Topnav__item-write-new nobottom" onClick={() => redirectToWrite()}>
+              <Action primary={true} id={"Topnav__new-contribution-id"} cozy={true} style={{ margin: '3px 0' }} 
               text={
               // <Tooltip placement="bottom" title={<span><a href="/write" style={{color: "white"}}>Write a new Contributor Report</a></span>}>
                 <Link to="/write" className="Topnav__newReport">
@@ -196,7 +231,10 @@ class Topnav extends React.Component {
                 </Link>
               // </Tooltip>
               }
-              onclick={() => {window.location.href="/write"}}
+              onclick={() => {
+                console.log("-new contribution btn clicked-");
+                redirectToWrite();
+              }}
               />
             </Menu.Item>
             <Menu.Item key="user" className="Topnav__item-user">

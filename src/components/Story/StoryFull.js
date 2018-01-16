@@ -461,7 +461,8 @@ class StoryFull extends React.Component {
           fullMode={true}
         />
 
-        {/*postType === 'blog' && <Blog
+
+        {postType === 'blog' && <Blog
         showVerified = {post.reviewed}
         showPending = {post.pending}
         showFlagged = {post.flagged}
@@ -516,7 +517,7 @@ class StoryFull extends React.Component {
           visible={this.state.moderatorCommentModal}
           title='Write a Moderator Comment'
           footer={false}
-          // okText='Done' 
+          // okText='Done'
           onCancel={() => {
             var mark = "verified";
             if (post.reviewed) {
@@ -662,7 +663,7 @@ class StoryFull extends React.Component {
               }
             >
               <span className="StoryFull__header__text__date">
-                <FormattedRelative value={`${post.created}Z`} /> 
+                <FormattedRelative value={`${post.created}Z`} />
               </span>
             </Tooltip>
           </div>
