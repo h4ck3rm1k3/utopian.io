@@ -31,6 +31,7 @@ class StoryFooter extends React.Component {
     post: PropTypes.shape().isRequired,
     postState: PropTypes.shape().isRequired,
     rewardFund: PropTypes.shape().isRequired,
+    currentMedianHistoryPrice: PropTypes.shape().isRequired,
     defaultVotePercent: PropTypes.number.isRequired,
     ownPost: PropTypes.bool,
     sliderMode: PropTypes.oneOf(['on', 'off', 'auto']),
@@ -38,6 +39,7 @@ class StoryFooter extends React.Component {
     onLikeClick: PropTypes.func,
     onShareClick: PropTypes.func,
     onEditClick: PropTypes.func,
+    fullMode: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -47,6 +49,7 @@ class StoryFooter extends React.Component {
     onLikeClick: () => {},
     onShareClick: () => {},
     onEditClick: () => {},
+    fullMode: false,
   };
 
   state = {
@@ -66,7 +69,7 @@ class StoryFooter extends React.Component {
   }
 
   loadSponsorship() {
-    const { user, post, getProject, defaultVotePercent, rewardFund } = this.props;
+    const { user, post, getProject, defaultVotePercent, rewardFund, currentMedianHistoryPrice } = this.props;
     const postData = post.json_metadata;
     const repository = postData.repository;
     const repoId = repository.id;
@@ -74,7 +77,7 @@ class StoryFooter extends React.Component {
     const _self = this;
     if(isOwner && repository.fork !== true) {
       getProject(postData.platform, postData.repository.id).then(res => {
-        if (res.status !== 404 && res.response.name && res.response.sponsorship.enabled === true) {
+        if (res.status !== 404 && res.response && res.response.name && res.response.sponsorship.enabled === true) {
           const project = res.response;
           const projectAccount = project.steem_account.account;
           steem.api.getAccounts([projectAccount], function(err, accounts) {
@@ -91,6 +94,7 @@ class StoryFooter extends React.Component {
                       sponsorsAccount,
                       rewardFund.recent_claims,
                       rewardFund.reward_balance,
+                      currentMedianHistoryPrice,
                       sponsorsVote.percent / 100 * 100,
                     )
                   });
@@ -103,6 +107,7 @@ class StoryFooter extends React.Component {
                       sponsorsAccount,
                       rewardFund.recent_claims,
                       rewardFund.reward_balance,
+                      currentMedianHistoryPrice,
                       defaultVotePercent / 100 * 100,
                     )
                   });
@@ -164,8 +169,7 @@ class StoryFooter extends React.Component {
       if (!this.state.voteWithSponsors) {
         this.props.onLikeClick(this.props.post, this.props.postState, this.state.sliderValue * 100);
       } else {
-        const access_token = Cookie.get('access_token');
-        voteWithSponsors(post.author, post.permlink, postData.platform, postData.repository.id, this.state.sliderSponsorsValue * 100, access_token).then(() => {
+        voteWithSponsors(post.author, post.permlink, postData.platform, postData.repository.id, this.state.sliderSponsorsValue * 100).then(() => {
           setTimeout(() => updateContribution(post.author, post.permlink), 1000);
         }).catch(() => setTimeout(() => updateContribution(post.author, post.permlink), 1000))
       }
@@ -179,7 +183,7 @@ class StoryFooter extends React.Component {
   handleSliderCancel = () => this.setState({ sliderVisible: false });
 
   handleSliderChange = (value) => {
-    const { user, rewardFund } = this.props;
+    const { user, rewardFund, currentMedianHistoryPrice } = this.props;
     const { sponsorsAccount } = this.state;
 
     if (!this.state.voteWithSponsors) {
@@ -187,6 +191,7 @@ class StoryFooter extends React.Component {
         user,
         rewardFund.recent_claims,
         rewardFund.reward_balance,
+        currentMedianHistoryPrice,
         value * 100,
       );
       this.setState({ sliderValue: value, voteWorth });
@@ -195,6 +200,7 @@ class StoryFooter extends React.Component {
         sponsorsAccount,
         rewardFund.recent_claims,
         rewardFund.reward_balance,
+        currentMedianHistoryPrice,
         value * 100,
       );
       this.setState({ sliderSponsorsValue: value, sponsorsVoteWorth });
@@ -202,12 +208,12 @@ class StoryFooter extends React.Component {
   };
 
   render() {
-    const { post, postState, pendingLike, loading, ownPost, defaultVotePercent } = this.props;
+    const { post, postState, pendingLike, loading, ownPost, defaultVotePercent, fullMode } = this.props;
 
     return (
       <div className="StoryFooter">
         <div className="StoryFooter__actions">
-          <Payout post={post} />
+          <Payout post={post} fullMode={fullMode}/>
           {this.state.sliderVisible && (
             <Confirmation onConfirm={this.handleLikeConfirm} onCancel={this.handleSliderCancel} />
           )}

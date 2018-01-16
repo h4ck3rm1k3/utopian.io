@@ -26,13 +26,12 @@ import BannedScreen from '../../statics/BannedScreen';
 const version = require('../../../package.json').version;
 
 // @UTOPIAN
-import { Modal, Icon } from 'antd';
+import { Modal, Icon } from 'antd';  import * as ReactIcon from 'react-icons/lib/md';
 import { getBeneficiaries } from '../../actions/beneficiaries';
 import { getStats } from '../../actions/stats';
 import { getUser } from '../../actions/user';
 import { getReposByGithub} from '../../actions/projects';
 import GithubConnection from '../../components/Sidebar/GithubConnection';
-import SimilarPosts from '../../components/Editor/SimilarPosts';
 
 @injectIntl
 @withRouter
@@ -152,35 +151,29 @@ class Write extends React.Component {
 
     this.setState({warningModal : false});
 
-    getBeneficiaries(data.author).then(res => {
+    const extensions = [[0, {
+      beneficiaries: [
+        {
+          account: 'utopian.pay',
+          weight: 2500
+        }
+      ]
+    }]];
+
+    const contributionData = {
+      ...data,
+      extensions
+    };
+
+    console.log("CONTRIBUTION DATA", contributionData);
+
+    this.props.createPost(contributionData);
+
+    /*getBeneficiaries(data.author).then(res => {
       if (res.response && res.response.results) {
         const beneficiariesArr = [];
         let utopianAssignedWeight = 0;
         const allBeneficiaries = res.response.results;
-        /*const beneficiaries = [
-          ...allBeneficiaries.map(beneficiary => {
-            let assignedWeight = 0;
-            if (beneficiary.vesting_shares) { // this is a sponsor
-              const sponsorSharesPercent = beneficiary.percentage_total_vesting_shares;
-              // 20% of all the rewards dedicated to sponsors
-              const sponsorsDedicatedWeight = 2000;
-              assignedWeight = Math.round((sponsorsDedicatedWeight * sponsorSharesPercent ) / 100);
-            } else {
-              // this is a moderator
-              const moderatorSharesPercent = beneficiary.percentage_total_rewards_moderators;
-              // 5% all the rewards dedicated to moderators
-              // This does not sum up. The total ever taken from an author is 20%
-              const moderatorsDedicatedWeight = 500;
-              assignedWeight = Math.round((moderatorsDedicatedWeight * moderatorSharesPercent ) / 100);
-            }
-
-            return {
-              account: beneficiary.account,
-              weight: assignedWeight || 1
-            }
-          })
-        ];*/
-
         allBeneficiaries.forEach((beneficiary, index) => {
           let assignedWeight = 0;
           if (beneficiary.vesting_shares) { // this is a sponsor
@@ -237,7 +230,7 @@ class Write extends React.Component {
       } else {
         alert("Something went wrong. Please try again!")
       }
-    });
+    }); */
   };
 
   onSubmit = (form) => {
@@ -456,8 +449,8 @@ class Write extends React.Component {
               onSubmit={this.onSubmit}
               onImageInserted={this.handleImageInserted}
               user={user}
+              parsedPostData={parsedPostData}
             />
-            <SimilarPosts data={parsedPostData} />
             <Modal
               visible={this.state.warningModal}
               title='Hey. Your Contribution may be better!'

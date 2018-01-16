@@ -12,7 +12,7 @@ import { getReposByGithub } from './actions/projects';
 import { getUser } from './actions/user';
 
 import { login, logout } from './auth/authActions';
-import { getRate, getRewardFund, getTrendingTopics } from './app/appActions';
+import { getRate, getRewardFund, getTrendingTopics, getCurrentMedianHistoryPrice } from './app/appActions';
 import Topnav from './components/Navigation/Topnav';
 import Transfer from './wallet/Transfer';
 import * as reblogActions from './app/Reblog/reblogActions';
@@ -30,6 +30,7 @@ import getTranslations, { getAvailableLocale } from './translations';
     getRate,
     getRewardFund,
     getTrendingTopics,
+    getCurrentMedianHistoryPrice,
     getRebloggedList: reblogActions.getRebloggedList,
     getReposByGithub,
     getUser,
@@ -47,6 +48,7 @@ export default class Wrapper extends React.PureComponent {
     getRate: PropTypes.func,
     getRewardFund: PropTypes.func,
     getTrendingTopics: PropTypes.func,
+    getCurrentMedianHistoryPrice: PropTypes.func,
   };
 
   static defaultProps = {
@@ -56,6 +58,7 @@ export default class Wrapper extends React.PureComponent {
     getRate: () => {},
     getRewardFund: () => {},
     getTrendingTopics: () => {},
+    getCurrentMedianHistoryPrice: () => {},
   };
 
   state = {
@@ -64,13 +67,14 @@ export default class Wrapper extends React.PureComponent {
   };
 
   componentWillMount() {
-    if (Cookie.get('access_token')) {
+    if (Cookie.get('session')) {
       this.props.login();
     }
     this.props.getRewardFund();
     this.props.getRebloggedList();
     this.props.getRate();
     this.props.getTrendingTopics();
+    this.props.getCurrentMedianHistoryPrice();
   }
 
   componentDidUpdate () {
@@ -80,9 +84,8 @@ export default class Wrapper extends React.PureComponent {
       this.setState({loadingRepos: true});
       getUser(user.name).then(res => {
         if (res.response && res.response.github) {
-          getReposByGithub(user.name, true).then( () => {
-            this.setState({loadedRepos: true, loadingRepos: false});
-          })
+          this.setState({loadedRepos: true, loadingRepos: false});
+          getReposByGithub(user.name, true);
         }else{
           this.setState({loadedRepos: true, loadingRepos: false});
         }
@@ -98,14 +101,17 @@ export default class Wrapper extends React.PureComponent {
       case 'new-contribution':
         this.props.history.push('/write');
         break;
+      case 'review':
+        this.props.history.push('/all/review');
+        break;
       case 'new-blog-post':
-        this.props.history.push('/write-blog');
+        this.props.history.push('/write');
         break;
       case 'activity':
         window.open(`https://steemd.com/@${this.props.user.name}`);
         break;
       case 'replies':
-        this.props.history.push('/replies');
+        window.open(`https://steemit.com/@${this.props.user.name}/recent-replies`);
         break;
       case 'bookmarks':
         this.props.history.push('/bookmarks');

@@ -8,6 +8,11 @@ import { find } from 'lodash';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import Lightbox from 'react-image-lightbox';
+import {
+  ShareButtons,
+  ShareCounts,
+  generateShareIcon
+} from 'react-share';
 import { formatter } from 'steem';
 import {
   getComments,
@@ -17,6 +22,7 @@ import {
   getAuthenticatedUserName,
 } from '../../reducers';
 import Body from './Body';
+import * as ReactIcon from 'react-icons/lib/md';
 import StoryFooter from '../StoryFooter/StoryFooter';
 import Avatar from '../Avatar';
 import Topic from '../Button/Topic';
@@ -28,6 +34,7 @@ import BanUser from '../../components/BanUser';
 import * as commentsActions from '../../comments/commentsActions';
 import { Modal } from 'antd';
 import { notify } from '../../app/Notification/notificationActions';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 
 import Blog from './Blog';
 import Contribution from './Contribution';
@@ -43,6 +50,7 @@ import './StoryFull.less';
     sendComment: (parentPost, body, isUpdating, originalPost) =>
       commentsActions.sendComment(parentPost, body, isUpdating, originalPost),
     notify,
+    // addPostPrefix
   }, dispatch),
 )
 
@@ -54,6 +62,7 @@ class StoryFull extends React.Component {
     post: PropTypes.shape().isRequired,
     postState: PropTypes.shape().isRequired,
     rewardFund: PropTypes.shape().isRequired,
+    currentMedianHistoryPrice: PropTypes.shape().isRequired,
     defaultVotePercent: PropTypes.number.isRequired,
     pendingLike: PropTypes.bool,
     pendingFollow: PropTypes.bool,
@@ -98,10 +107,12 @@ class StoryFull extends React.Component {
     super(props);
     this.state = {
       verifyModal: false,
+      submitting: false,
       moderatorCommentModal: false,
+      shareModal: false,
       reviewsource: 0,
-      commentDefaultFooter: '\n\nYou can contact us on [Discord](https://discord.gg/UCvqCsx).\n**[[utopian-moderator]](https://utopian.io/moderators)**',
-      commentFormText: '\n\nYou can contact us on [Discord](https://discord.gg/UCvqCsx).\n**[[utopian-moderator]](https://utopian.io/moderators)**',
+      commentDefaultFooter: '\n\nYou can contact us on [Discord](https://discord.gg/uTyJkNm).\n**[[utopian-moderator]](https://utopian.io/moderators)**',
+      commentFormText: '\n\nYou can contact us on [Discord](https://discord.gg/uTyJkNm).\n**[[utopian-moderator]](https://utopian.io/moderators)**',
       modTemplate: '',
       lightbox: {
         open: false,
@@ -116,6 +127,17 @@ class StoryFull extends React.Component {
 
   componentWillUnmount() {
     document.body.classList.remove('white-bg');
+  }
+
+  // Show that the text was copied and dismiss warning after 2 seconds
+  handlePostCopy = () => {
+    this.setState({ postCopied: true })
+    setTimeout(() => this.setState({ postCopied: false }), 2000)
+  }
+
+  handleModalCopy = () => {
+    this.setState({ modalCopied: true })
+    setTimeout(() => this.setState({ modalCopied: false }), 2000)
   }
 
   handleClick = (key) => {
@@ -180,6 +202,14 @@ class StoryFull extends React.Component {
   setModTemplate(event) {
     this.setModTemplateByName(event.target.value);
   }
+  tagString(tags) {
+    var ret = "";
+    for (var i = 0; i < tags.length; ++i) {
+      ret += tags[i];
+      if (i !== (tags.length - 1)) ret += ", ";
+    }
+    return ret;
+  }
 
   render() {
     const {
@@ -194,6 +224,7 @@ class StoryFull extends React.Component {
       commentCount,
       saving,
       rewardFund,
+      currentMedianHistoryPrice,
       ownPost,
       sliderMode,
       defaultVotePercent,
@@ -210,8 +241,14 @@ class StoryFull extends React.Component {
     const video = post.json_metadata.video;
     const isLogged = Object.keys(user).length;
     const isAuthor = isLogged && user.name === post.author;
-    const isModerator = isLogged && R.find(R.propEq('account', user.name))(moderators) && !isAuthor;
+    const inModeratorsObj = R.find(R.propEq('account', user.name))(moderators);
+    const isModerator = isLogged && inModeratorsObj && !isAuthor ? inModeratorsObj : false;
+
     const reviewed = post.reviewed || false;
+
+    const getShortLink = (post) => {
+      return `https://utopian.io/u/${post.id}`;
+    }
 
     let followText = '';
 
@@ -249,6 +286,8 @@ class StoryFull extends React.Component {
 
     let popoverMenu = [];
 
+    console.log("OWN POST", ownPost)
+
     if (ownPost && post.cashout_time !== '1969-12-31T23:59:59') {
       popoverMenu = [...popoverMenu, <PopoverMenuItem key="edit">
         {saving ? <Icon type="loading" /> : <i className="iconfont icon-write" />}
@@ -265,13 +304,13 @@ class StoryFull extends React.Component {
 
     popoverMenu = [
       ...popoverMenu,
-      <PopoverMenuItem key="save">
-        {pendingBookmark ? <Icon type="loading" /> : <i className="iconfont icon-collection" />}
-        <FormattedMessage
-          id={postState.isSaved ? 'unsave_post' : 'save_post'}
-          defaultMessage={postState.isSaved ? 'Unsave post' : 'Save post'}
-        />
-      </PopoverMenuItem>,
+      // <PopoverMenuItem key="save">
+      //   {pendingBookmark ? <Icon type="loading" /> : <i className="iconfont icon-collection" />}
+      //   <FormattedMessage
+      //     id={postState.isSaved ? 'unsave_post' : 'save_post'}
+      //     defaultMessage={postState.isSaved ? 'Unsave post' : 'Save post'}
+      //   />
+      // </PopoverMenuItem>,
       <PopoverMenuItem key="report">
         <i className="iconfont icon-flag" />
         <FormattedMessage id="report_post" defaultMessage="Report post" />
@@ -282,6 +321,47 @@ class StoryFull extends React.Component {
     const repository = metaData.repository;
     const postType = post.json_metadata.type;
     const alreadyChecked = isModerator && (post.reviewed || post.pending || post.flagged);
+    const mobileView = (window.innerWidth <= 736);
+    const shortLong = (s, l) => {
+      if (mobileView) {
+        return s;
+      } else {
+        return l;
+      }
+    }
+    const {
+      FacebookShareButton,
+      GooglePlusShareButton,
+      LinkedinShareButton,
+      TwitterShareButton,
+      TelegramShareButton,
+      WhatsappShareButton,
+      PinterestShareButton,
+      VKShareButton,
+      OKShareButton,
+      RedditShareButton,
+      TumblrShareButton,
+      LivejournalShareButton,
+      EmailShareButton,
+    } = ShareButtons;
+  
+    const FacebookIcon = generateShareIcon('facebook');
+    const TwitterIcon = generateShareIcon('twitter');
+    const GooglePlusIcon = generateShareIcon('google');
+    const LinkedinIcon = generateShareIcon('linkedin');
+    const PinterestIcon = generateShareIcon('pinterest');
+    const VKIcon = generateShareIcon('vk');
+    const OKIcon = generateShareIcon('ok');
+    const TelegramIcon = generateShareIcon('telegram');
+    const WhatsappIcon = generateShareIcon('whatsapp');
+    const RedditIcon = generateShareIcon('reddit');
+    const TumblrIcon = generateShareIcon('tumblr');
+    const MailruIcon = generateShareIcon('mailru');
+    const EmailIcon = generateShareIcon('email');
+    const LivejournalIcon = generateShareIcon('livejournal');
+  
+    const shareTitle = `${post.title} - Utopian.io`
+    const shareUrl = "https://utopian.io/" + post.url;
 
     return (
       <div className="StoryFull">
@@ -289,32 +369,48 @@ class StoryFull extends React.Component {
 
           {!alreadyChecked ? <h3>
             <Icon type="safety" /> {!isModerator ? 'Under Review' : 'Review Contribution'}
+            <br/>
           </h3> : null}
 
-          {!isModerator ? <p>
+          {!isModerator ? <p className="StoryFull__reviewP">
             A moderator will review this contribution within 24-48 hours and suggest changes if necessary. This is to ensure the quality of the contributions and promote collaboration inside Utopian.
                 {isAuthor ? ' Check the comments often to see if a moderator is requesting for some changes. ' : null}
           </p> : null}
 
-          {isModerator && !alreadyChecked ? <p>
+          {isModerator && !alreadyChecked ? <p className="StoryFull__reviewP">
             Hello Moderator. How are you today? <br />
             Please make sure this contribution meets the{' '}<Link to="/rules">Utopian Quality Standards</Link>.<br />
           </p> : null}
 
-          {isModerator && alreadyChecked ? <div>
-            <h3><Icon type="safety" /> Moderation Status</h3>
-            {post.reviewed && <p><b>ACCEPTED BY:</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
-            {post.flagged && <p><b>HIDDEN BY:</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
-            {post.pending && <p><b>PENDING REVIEW:</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
-          </div> : null}
+          {isModerator && alreadyChecked ? 
+          <div>
+            {!mobileView ? 
+            <span>
+            <h3><center><Icon type="safety" /> Moderation Control </center></h3>
+            {post.reviewed && <p><b>Status: &nbsp;</b> <Icon type="check-circle"/>&nbsp; Accepted <span className="smallBr"><br /></span> <b>Moderated By: &nbsp;</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
+            {post.flagged && <p><b>Status: &nbsp;</b> <Icon type="exclamation-circle"/>&nbsp; Hidden <span className="smallBr"><br /></span> <b>Moderated By: &nbsp;</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
+            {post.pending && <p><b>Status: &nbsp;</b> <Icon type="sync"/>&nbsp; Pending <span className="smallBr"><br/></span> <b>Moderated By: &nbsp;</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
+            </span>
+            :
+            <span>
+            <h3><center><Icon type="safety" /> Moderation  </center></h3>
+            {post.reviewed && <p> <Icon type="check-circle"/>&nbsp; Accepted <span className="smallBr"><br /></span> <b>Mod: &nbsp;</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
+            {post.flagged && <p> <Icon type="exclamation-circle"/>&nbsp; Hidden <span className="smallBr"><br /></span> <b>Mod: &nbsp;</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
+            {post.pending && <p> <Icon type="sync"/>&nbsp; Pending <span className="smallBr"><br/></span> <b>Mod: &nbsp;</b> <Link className="StoryFull__modlink" to={`/@${post.moderator}`}>@{post.moderator}</Link></p>}
+            </span>
+            }
+          </div> 
+          : null}
 
           {isModerator ? <div>
-            {!post.flagged && <Action
+            {!post.flagged && !post.reviewed || (post.reviewed && isModerator.supermoderator === true) ? <Action
               id="hide"
+              className={`${mobileView ? 'StoryFull__mobilebtn' : ''}`}
               primary={true}
-              text='Hide forever'
+              tiny={mobileView}
+              text={shortLong(<span><Icon type="exclamation-circle"/></span>, 'Hide Forever')}
               onClick={() => {
-                var confirm = window.confirm('Are you sure? Flagging should be done only if this is spam or if the user has not been responding for over 48 hours to your requests.')
+                var confirm = window.confirm('Are you sure? Flagging should be done only if this is spam or if the contribution is against the Utopian Rules.')
                 if (confirm) {
                   moderatorAction(post.author, post.permlink, user.name, 'flagged').then(() => {
                     this.setState({ reviewsource: 1 })
@@ -323,24 +419,29 @@ class StoryFull extends React.Component {
                   });
                 }
               }}
-            />}
-            {!post.pending && !post.reviewed && <Action
+            /> : null}
+
+            {/*!post.pending && !post.reviewed && <Action
               id="pending"
+              className={`${mobileView ? 'StoryFull__mobilebtn' : ''}`}
               primary={true}
-              text='Pending Review'
+              tiny={mobileView}
+              text={shortLong(<span><Icon type="sync"/></span>, 'Pending Review')}
               onClick={() => {
                 moderatorAction(post.author, post.permlink, user.name, 'pending');
                 this.setModTemplateByName("pendingDefault");
                 this.setState({ moderatorCommentModal: true })
               }}
-            />}
+            />*/}
 
-            {!post.reviewed && <Action
+            {!post.reviewed && !post.flagged || (post.flagged && isModerator.supermoderator === true) ? <Action
               id="verified"
+              className={`${mobileView ? 'StoryFull__mobilebtn' : ''}`}
               primary={true}
-              text='Verified'
+              tiny={mobileView}
+              text={shortLong(<span><Icon type="check-circle"/></span>, 'Verify')}
               onClick={() => this.setState({ verifyModal: true })}
-            />}
+            /> : null}
 
             {!post.reviewed && <span className="floatRight"><BanUser intl={intl} user={post.author}/>&nbsp;&nbsp;</span>}
           </div> : null
@@ -348,28 +449,30 @@ class StoryFull extends React.Component {
 
         </div> : null}
 
-        {repository && <Contribution
+        <Contribution
           type={postType}
-          repository={repository}
-          platform={metaData.platform}
-          id={repository.id}
+          repository={repository || null}
+          platform={metaData.platform || null}
+          id={repository && repository.id ? repository.id : null}
           showVerified={ post.reviewed }
           showPending={ post.pending }
           showFlagged={ post.flagged }
           showInProgress = { (!(post.reviewed || post.pending || post.flagged)) }
-        />}
+          fullMode={true}
+        />
 
-        {postType === 'blog' && <Blog 
+        {/*postType === 'blog' && <Blog
         showVerified = {post.reviewed}
         showPending = {post.pending}
         showFlagged = {post.flagged}
         showInProgress = { (!(post.reviewed || post.pending || post.flagged)) }
-        />}
+        fullMode={true}
+        />*/}
 
         <Modal
           visible={this.state.verifyModal}
           title='Does this contribution meet the Utopian Standards?'
-          okText='Yes, Verify'
+          okText={this.state.submitting ? 'Submitting...' : 'Yes, Verify'}
           cancelText='Not yet'
           onCancel={() => {
             var confirm = window.confirm("Would you like to set this post as Pending Review instead?")
@@ -382,8 +485,10 @@ class StoryFull extends React.Component {
             this.setState({ verifyModal: false })
           }}
           onOk={() => {
+            this.setState({ submitting: true });
             moderatorAction(post.author, post.permlink, user.name, 'reviewed').then(() => {
-              this.setState({ verifyModal: false })
+              this.setState({ verifyModal: false });
+              this.setState({ submitting: false });
               this.setState({ commentFormText: 'Thank you for the contribution. It has been approved.' + this.state.commentDefaultFooter })
               this.setState({ moderatorCommentModal: true })
             });
@@ -527,7 +632,14 @@ class StoryFull extends React.Component {
               defaultMessage="{count} comments"
             />
           </a>
+          &nbsp;&nbsp;-&nbsp;&nbsp;
+          <CopyToClipboard text={getShortLink(post)} onCopy={this.handlePostCopy}>
+            <span><Icon type="paper-clip" style={{color: "green"}}/> Copy Short Link</span>
+          </CopyToClipboard>
+          &nbsp;&nbsp;-&nbsp;&nbsp;
+          <a href="#" onClick={() => {this.setState({shareModal: true})}}> <ReactIcon.MdShare /> Share</a>
         </h3>
+        { this.state.postCopied && <span>&nbsp;&nbsp;&nbsp;&nbsp;Copied</span> }
         <div className="StoryFull__header">
           <Link to={`/@${post.author}`}>
             <Avatar username={post.author} size={60} />
@@ -536,7 +648,7 @@ class StoryFull extends React.Component {
             <Link to={`/@${post.author}`}>
               {post.author}
               <Tooltip title={intl.formatMessage({ id: 'reputation_score', defaultMessage: 'Reputation score' })}>
-                <Tag>
+                <Tag className="StoryFull__reputationTag">
                   {formatter.reputation(post.author_reputation)}
                 </Tag>
               </Tooltip>
@@ -550,7 +662,7 @@ class StoryFull extends React.Component {
               }
             >
               <span className="StoryFull__header__text__date">
-                <FormattedRelative value={`${post.created}Z`} />
+                <FormattedRelative value={`${post.created}Z`} /> 
               </span>
             </Tooltip>
           </div>
@@ -614,8 +726,116 @@ class StoryFull extends React.Component {
           />
         )}
         <div className="StoryFull__topics">
-          {tags && tags.map(tag => <Topic key={tag} name={tag} />)}
+          <Tooltip title={<span><b>Tags:</b> {this.tagString(tags)}</span>}>
+          {tags && tags.map(tag => 
+          <span>
+          <Topic key={tag} name={tag} />&nbsp;
+          </span>
+          )}
+          </Tooltip>
+          <b>&nbsp;&nbsp;&middot;&nbsp;&nbsp;</b> <a href="#" onClick={() => {this.setState({shareModal: true})}}><ReactIcon.MdShare /> Share</a>
         </div>
+        <Modal
+          visible={this.state.shareModal}
+          title={"Share this Contribution!"}
+          footer={false}
+          onCancel={() => {this.setState({shareModal: false})}}
+          >
+          Click a button below to share this contribution to your favorite social media site!<br/>
+          <div className="ShareButtons">
+            <span className="ShareButtons__Facebook">
+              <FacebookShareButton
+                url={shareUrl}
+                hashtag={"#IAmUtopian"}
+                className="ShareButtons__button ShareButtons__Facebook__btn">
+                <a href="#">
+                  <FacebookIcon
+                    size={32}
+                    round />  </a>
+              </FacebookShareButton>
+            </span><br /><br />
+            <span className="ShareButtons__Twitter">
+              <TwitterShareButton
+                url={shareUrl}
+                title={shareTitle}
+                via={"utopian_io"}
+                hashtags={["utopian-io", "IAmUtopian", "open-source"]}
+                className="ShareButtons__button ShareButtons__Twitter__btn">
+                <a href="#">
+                  <TwitterIcon
+                    size={32}
+                    round />
+                </a>
+              </TwitterShareButton>
+            </span><br /><br />
+            <span className="ShareButtons__LinkedIn">
+              <LinkedinShareButton
+                url={shareUrl}
+                title={shareTitle}
+                description={'View this open-source contribution on Utopian.io.'}
+                windowWidth={750}
+                windowHeight={600}
+                className="ShareButtons__button ShareButtons__LinkedIn__btn">
+                <a href="#">
+                  <LinkedinIcon
+                    size={32}
+                    round />
+                </a>
+              </LinkedinShareButton>
+            </span><br /><br />
+            <span className="ShareButtons__Whatsapp">
+              <WhatsappShareButton
+                url={shareUrl}
+                title={shareTitle}
+                separator=":: "
+                className="ShareButtons__button">
+                <a href="#"><WhatsappIcon size={32} round /></a>
+              </WhatsappShareButton>
+            </span><br/><br/>
+            <span className="ShareButtons__GooglePlus">
+              <GooglePlusShareButton
+                url={shareUrl}
+                className="ShareButtons__button">
+                <a href="#"><GooglePlusIcon
+                  size={32}
+                  round /></a>
+              </GooglePlusShareButton>
+            </span><br/><br/>
+            <span className="ShareButtons__Reddit">
+              <RedditShareButton
+                url={shareUrl}
+                title={shareTitle}
+                windowWidth={660}
+                windowHeight={460}
+                className="ShareButtons__button">
+                <a href="#">
+                  <RedditIcon
+                    size={32}
+                    round /></a>
+              </RedditShareButton>
+            </span><br /><br />
+            <span className="ShareButtons__Email">
+              <EmailShareButton
+                url={shareUrl}
+                subject={shareTitle}
+                body={`Here's a cool open-source contribution I found on Utopian.io! The link is ${shareUrl}`}
+                className="ShareButtons__button">
+                <a href="#"><EmailIcon
+                  size={32}
+                  round /></a>
+              </EmailShareButton>
+            </span><br /><br />
+          </div>
+          <br/>
+          You can also copy the link directly
+          <CopyToClipboard text={getShortLink(post)}
+            onCopy={this.handleModalCopy}>
+            <a href="#">&nbsp;here.</a>
+          </CopyToClipboard>
+          <br/>
+          { this.state.modalCopied && <span>&nbsp;&nbsp;&nbsp;&nbsp;Copied</span> }
+        </Modal>
+
         {metaData.pullRequests && metaData.pullRequests.length > 0 ?
           <div>
             <h3><Icon type="github" /> Linked Pull Requests</h3>
@@ -631,6 +851,7 @@ class StoryFull extends React.Component {
           user={user}
           ownPost={ownPost}
           rewardFund={rewardFund}
+          currentMedianHistoryPrice={currentMedianHistoryPrice}
           sliderMode={sliderMode}
           defaultVotePercent={defaultVotePercent}
           post={post}
@@ -638,6 +859,7 @@ class StoryFull extends React.Component {
           pendingLike={pendingLike}
           onLikeClick={onLikeClick}
           onShareClick={onShareClick}
+          fullMode={true}
         />}
       </div>
     );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal } from 'antd';
-import { Icon } from 'antd';
+import { Icon } from 'antd'; import * as ReactIcon from 'react-icons/lib/md';
 import Action from '../../components/Button/Action';
 import steem from 'steem';
 import Cookie from 'js-cookie';
@@ -87,11 +87,10 @@ class ActivateSponsorship extends React.Component {
               } else {
                 const confirm = window.confirm("Are you sure you want to enable Sponsorship for this project? This action cannot be undone.");
                 if (confirm) {
-                  const accessToken = Cookie.get('access_token');
                   this.setState({
                     isCreatingAccount: true,
                   });
-                  createProjectAccount(externalId, this.state.projectName, platform, user.name, accessToken).then((res) => {
+                  createProjectAccount(externalId, this.state.projectName, platform, user.name).then((res) => {
                     if (res.response && res.response.project_name) {
                       this.setState({ sponsorshipModal: false, isCreatingAccount: false });
                       window.location.reload();
