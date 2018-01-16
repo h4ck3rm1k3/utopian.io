@@ -28,6 +28,7 @@ class Story extends React.Component {
     post: PropTypes.shape().isRequired,
     postState: PropTypes.shape().isRequired,
     rewardFund: PropTypes.shape().isRequired,
+    currentMedianHistoryPrice: PropTypes.shape().isRequired,
     defaultVotePercent: PropTypes.number.isRequired,
     pendingLike: PropTypes.bool,
     pendingFollow: PropTypes.bool,
@@ -121,6 +122,7 @@ class Story extends React.Component {
       pendingBookmark,
       saving,
       rewardFund,
+      currentMedianHistoryPrice,
       ownPost,
       sliderMode,
       defaultVotePercent,
@@ -236,25 +238,25 @@ class Story extends React.Component {
             <i className="iconfont icon-unfold Story__more" />
           </Popover>
 
-          {repository && <Contribution
+           <Contribution
             type={ postType }
-            repository={ repository }
-            platform={ metaData.platform }
-            id={ repository.id }
+            repository={ repository || null}
+            platform={ metaData.platform || null}
+            id={repository && repository.id ? repository.id : null}
             showVerified={ post.reviewed }
             showPending={ post.pending }
             showFlagged={ post.flagged }
             showInProgress = { (!(post.reviewed || post.pending || post.flagged)) }
             fullMode={false}
-          />}
+          />
 
-          {postType === 'blog' && <Blog
+         {/*postType === 'blog' && <Blog
             showVerified = {post.reviewed}
             showPending = {post.pending}
             showFlagged = {post.flagged}
             showInProgress = { (!(post.reviewed || post.pending || post.flagged)) }
             fullMode={false}
-          />}
+          />*/}
 
           <div className="Story__content">
             <Link to={post.url} className="Story__content__title">
@@ -323,6 +325,7 @@ class Story extends React.Component {
               postState={postState}
               pendingLike={pendingLike}
               rewardFund={rewardFund}
+              currentMedianHistoryPrice={currentMedianHistoryPrice}
               ownPost={ownPost}
               sliderMode={sliderMode}
               defaultVotePercent={defaultVotePercent}

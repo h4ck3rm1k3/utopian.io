@@ -1,6 +1,9 @@
 [Utopian.io](https://utopian.io) wants to reward Open Source contributors for their hard work. 
 Forked from https://github.com/busyorg/busy, Utopian uses the [STEEM Blockchain](https://steem.io) to reward contributors in cryptocurrency.
 
+
+## Contributing
+To contribute please join on the discord channel https://discord.gg/Pc8HG9x
 See the website in action [here:](https://utopian.io)
 
 <center><img src="https://steemitimages.com/DQmYgMbYHNtiNmA6TbSL34tNwaMvxsQu2o5zrDvnbDks8bY/image.png"/></center>

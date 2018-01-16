@@ -62,7 +62,7 @@ if (process.env.NODE_ENV === 'production') {
       return next();
     }
   });
-  app.use(express.static(path.join(rootDir, 'public'), { maxAge: OneWeek }));
+  app.use(express.static(path.join(rootDir, 'public')));
 } else {
   app.use(express.static(path.join(rootDir, 'assets')));
 }
@@ -150,7 +150,8 @@ function serverSideResponse(req, res) {
     .catch(error => res.end(error.message));
 }
 
-app.get('/callback', authCallback);
+app.get('/callback', authCallback({ sendCookie: true }));
+app.get('/connect', authCallback({ allowAnyRedirect: true }));
 
 app.get('/trending(/:category)', serverSideResponse);
 app.get('/hot(/:category)', serverSideResponse);
