@@ -1,83 +1,105 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Icon } from 'antd';
+import { Icon } from 'antd'; import * as ReactIcon from 'react-icons/lib/md';
+import CategoryIcon from '../CategoriesIcons';
 
 import './Contribution.less';
-
-const icon = type => {
-  switch (type) {
-    case 'announcement-ideas':
-    case 'ideas':
-      return 'bulb';
-    case 'announcement-development':
-    case 'development':
-      return 'code';
-    case 'announcement-bug-hunting':
-    case 'bug-hunting':
-      return 'eye-o';
-    case 'announcement-documentation':
-    case 'documentation':
-      return 'book';
-    case 'announcement-translations':
-    case 'translations':
-      return 'flag';
-    case 'announcement-analysis':
-    case 'analysis':
-      return 'dot-chart';
-    case 'announcement-graphics':
-    case 'graphics':
-      return 'layout';
-    case 'announcement-social':
-    case 'social':
-      return 'share-alt';
-  }
-};
 
 const categorySlug = type => {
   switch (type) {
     case 'ideas':
-      return 'Idea for';
+      return 'SUGGESTION';
+    case 'sub-projects':
+      return 'SUB-PROJECT';
     case 'development':
-      return 'Development of';
+      return 'DEVELOPMENT';
     case 'bug-hunting':
-      return 'Bug in';
-    case 'documentation':
-      return 'Documentation for';
+      return 'BUG';
     case 'translations':
-      return 'Translation for';
+      return 'TRANSLATION';
     case 'analysis':
-      return 'Analysis for';
+      return 'ANALYSIS';
     case 'graphics':
-      return 'Design for';
+      return 'GRAPHICS';
     case 'social':
-      return 'Visibility for';
-    case 'announcement-ideas':
-      return 'Thinkers for';
-    case 'announcement-development':
-      return 'Developers for';
-    case 'announcement-bug-hunting':
-      return 'Bug Hunters for';
-    case 'announcement-documentation':
-      return 'Tech Writers for';
-    case 'announcement-translations':
-      return 'Translators for';
-    case 'announcement-analysis':
-      return 'Data Analyst for';
-    case 'announcement-graphics':
-      return 'Designer';
-    case 'social':
-      return 'Influencers for';
+      return 'VISIBILITY';
+    case 'documentation':
+      return 'DOCUMENTATION';
+    case 'tutorials':
+      return 'TUTORIAL';
+    case 'video-tutorials':
+      return 'VIDEO TUTORIAL';
+    case 'copywriting':
+      return 'COPYWRITING';
+    case 'blog':
+      return 'BLOG POST';
+    case 'task-ideas':
+      return 'THINKERS';
+    case 'task-development':
+      return 'DEVELOPERS';
+    case 'task-bug-hunting':
+      return 'BUG HUNTERS';
+    case 'task-documentation':
+      return 'TECH WRITERS';
+    case 'task-translations':
+      return 'TRANSLATORS';
+    case 'task-analysis':
+      return 'DATA ANALYSTS';
+    case 'task-graphics':
+      return 'DESIGNERS';
+    case 'task-social':
+      return 'INFLUENCERS';
   }
 };
 
-const Contribution = ({type, repository, platform, id }) => (
-  <div className={`Contribution ${type}`}>
-    <b>
-      <Icon type={icon(type)} /> {categorySlug(type)} </b>:
-    <Link to={`/project/${repository.full_name}/${platform}/${id}/all`}>
-      {' '} <Icon type='github' /> {repository.name}
-    </Link>
-    {type.indexOf('announcement') > -1 && <Icon type="notification" className="announcement"/> }
+const parsedRepoName = (author, name) => {
+  if ((author.length + name.length) < 35) {
+    return `${author}/${name}`;
+  }
+  if (author.length > 15) {
+    author = author.substr(0, 15) + "...";
+  }
+  if (name.length > 23) {
+    name = name.substr(0, 23) + "...";
+  }
+  return `${author}/${name}`;
+}
+
+const modeClass = fm => {
+  if (fm === true) return "yesfull";
+  return "nofull";
+}
+
+const Contribution = ({type, repository, platform, id, showVerified, showPending, showFlagged, showInProgress, fullMode}) => (
+  <div className={`Contribution ${type} ${modeClass(fullMode)}`}>
+    <span>
+    
+      <span className={`Contribution__c-${(fullMode === false) ? type : "yes-full"}`}><CategoryIcon from="from-story" type={type}/></span> {categorySlug(type)}
+
+      {repository && platform && id ? <span>
+        {' '} <b>&middot;</b> {'  '} <a href={`https://github.com/${repository.full_name}`}><Icon type='github' /></a> <Link to={`/project/${repository.full_name}/${platform}/${id}/all`}>{parsedRepoName(repository.owner.login, repository.name)}</Link>
+      </span> : null}
+    </span>
+
+    {showPending ?
+      <span className="markPullRight">
+      <Icon type="sync" className={`${showPending || showFlagged || showInProgress ? 'withStatus' : '' }`}/>
+        {type.indexOf('task') > -1 && <span>&nbsp;&nbsp;<b><Icon type="notification" className=""/></b></span> }
+      </span>
+      : null}
+    {showFlagged ?
+      <span className="markPullRight">
+      <Icon type="markIcon" className={`${showPending || showFlagged || showInProgress ? 'withStatus' : '' }`}/>
+        {type.indexOf('task') > -1 && <span>&nbsp;&nbsp;<b><Icon type="notification" className=""/></b></span> }
+      </span>
+      : null}
+    {showInProgress ?
+      <span className="markPullRight">
+      <Icon type="safety" className={`${showPending || showFlagged || showInProgress ? 'withStatus' : '' }`}/>
+        {type.indexOf('task') > -1 && <span>&nbsp;&nbsp;<b><Icon type="notification" className=""/></b></span> }
+      </span>
+      : null}
+    {(!showPending && !showFlagged && !showInProgress && (type.indexOf('task') > -1)) && <span className="markPullRight"><b><Icon type="notification" className=""/></b></span> }
   </div>
 );
 

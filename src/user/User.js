@@ -33,7 +33,7 @@ export const needs = [getAccountWithFollowingCount];
 
 import EmptyFeed from '../statics/EmptyFeed';
 
-import { getGithubProjects } from '../actions/projects';
+import { getReposByGithub } from '../actions/projects';
 import * as Actions from '../actions/constants';
 
 @connect(
@@ -45,7 +45,7 @@ import * as Actions from '../actions/constants';
   }), {
     getAccountWithFollowingCount,
     openTransfer,
-    getGithubProjects,
+    getReposByGithub,
   })
 export default class User extends React.Component {
   static propTypes = {
@@ -68,18 +68,19 @@ export default class User extends React.Component {
     super (props);
 
     this.state = {
-      githubProjects: []
+      githubProjects: [],
+      popoverVisible: false,
     };
   }
 
   componentWillMount() {
-    const {getGithubProjects, match} = this.props;
+    const {getReposByGithub, match} = this.props;
     if (!this.props.user.name) {
       this.props.getAccountWithFollowingCount({ name: this.props.match.params.name });
       return;
     }
 
-    getGithubProjects(match.params.name).then(res => {
+    getReposByGithub(match.params.name).then(res => {
       this.setState({
         githubProjects: res.response || []
       })
@@ -88,7 +89,7 @@ export default class User extends React.Component {
 
 
   componentDidUpdate(prevProps) {
-    const {getGithubProjects, match, authenticatedUser, user} = this.props;
+    const {getReposByGithub, match, authenticatedUser, user} = this.props;
 
     if (prevProps.match.params.name !== this.props.match.params.name) {
       this.props.getAccountWithFollowingCount({ name: this.props.match.params.name });
@@ -97,7 +98,7 @@ export default class User extends React.Component {
     if (prevProps.user !== user) {
       const isOnwer = authenticatedUser && authenticatedUser.name === match.params.name;
 
-      getGithubProjects(match.params.name, isOnwer).then(res => {
+      getReposByGithub(match.params.name, isOnwer).then(res => {
         this.setState({
           githubProjects: res.response || []
         })
@@ -106,11 +107,20 @@ export default class User extends React.Component {
   }
 
   handleUserMenuSelect = (key) => {
-    if (key === 'transfer') this.props.openTransfer(this.props.match.params.name);
+    if (key === 'transfer') {
+      this.props.openTransfer(this.props.match.params.name);
+      this.setState({
+        popoverVisible: false,
+      });
+    }
   };
 
+  handleVisibleChange = (visible) => {
+    this.setState({ popoverVisible: visible });
+  }
+
   render() {
-    const { authenticated, authenticatedUser, match, loading, getGithubProjects } = this.props;
+    const { authenticated, authenticatedUser, match, loading, getReposByGithub } = this.props;
     const username = this.props.match.params.name;
     const { user } = this.props;
     const { profile = {} } = user.json_metadata || {};
@@ -151,16 +161,19 @@ export default class User extends React.Component {
           />
         </Helmet>
         <ScrollToTopOnMount />
-        {user &&
-        <UserHero
-          authenticated={authenticated}
-          user={user}
-          username={displayedUsername}
-          isSameUser={isSameUser}
-          hasCover={hasCover}
-          onFollowClick={this.handleFollowClick}
-          onSelect={this.handleUserMenuSelect}
-        />}
+        {user && (
+          <UserHero
+            authenticated={authenticated}
+            user={user}
+            username={displayedUsername}
+            isSameUser={isSameUser}
+            hasCover={hasCover}
+            onFollowClick={this.handleFollowClick}
+            onSelect={this.handleUserMenuSelect}
+            isPopoverVisible={this.state.popoverVisible}
+            handleVisibleChange={this.handleVisibleChange}
+          />
+        )}
         <div className="shifted">
           <div className="feed-layout container">
             <Affix className="leftContainer" stickPosition={72}>
@@ -171,7 +184,7 @@ export default class User extends React.Component {
             <Affix className="rightContainer" stickPosition={72}>
               <div className="right">
                 {user && user.name &&
-                <RightSidebar key={user.name} />
+                <RightSidebar key={user.name} match={match}/>
                 }
               </div>
             </Affix>
@@ -183,15 +196,15 @@ export default class User extends React.Component {
                   return (
                     <ProjectsFeed
                       content={ this.state.githubProjects }
-                      isFetching={ loading === Actions.GET_GITHUB_PROJECTS_REQUEST }
+                      isFetching={ loading === Actions.GET_USER_REPOS_GITHUB_REQUEST }
                       hasMore={ false }
                       loadMoreContent={() => null}
                     />
                   )
                 }
 
-                if(!this.state.githubProjects.length && loading !== Actions.GET_GITHUB_PROJECTS_REQUEST) {
-                  return <EmptyFeed text={'No projects found'} />
+                if(!this.state.githubProjects.length && loading !== Actions.GET_USER_REPOS_GITHUB_REQUEST) {
+                  return <EmptyFeed type={'project'} />
                 }
               }}
               />
