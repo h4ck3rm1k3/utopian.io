@@ -35,6 +35,24 @@ export const updateContributionRequest = (author, permlink) => ({
 
 export const updateContribution = (author, permlink) => dispatch => dispatch(updateContributionRequest(author, permlink));
 
+export const editContributionRequest = (author, permlink, contribution) => ({
+  [CALL_API]: {
+    types: [ Actions.EDIT_CONTRIBUTION_REQUEST, Actions.EDIT_CONTRIBUTION_SUCCESS, Actions.EDIT_CONTRIBUTION_FAILURE ],
+    endpoint: `posts/edit`,
+    schema: null,
+    method: 'PUT',
+    payload: {
+      author,
+      permlink,
+      contribution,
+    },
+    additionalParams: {},
+    absolute: false
+  }
+});
+
+export const editContribution = (author, permlink, contribution) => dispatch => dispatch(editContributionRequest(author, permlink, contribution));
+
 export const getContributionRequest = (author, permlink) => ({
   [CALL_API]: {
     types: [ Actions.GET_CONTRIBUTION_REQUEST, Actions.GET_CONTRIBUTION_SUCCESS, Actions.GET_CONTRIBUTION_FAILURE ],
@@ -59,7 +77,7 @@ export const moderatorActionRequest = (author, permlink, moderator, status) => (
       author,
       permlink,
       moderator,
-      reviewed: status === 'reviewed',
+      reviewed: status === 'reviewed' ,
       flagged: status === 'flagged',
       pending: status === 'pending',
     },

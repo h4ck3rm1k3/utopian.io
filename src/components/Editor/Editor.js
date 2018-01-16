@@ -7,29 +7,32 @@ import { injectIntl, FormattedMessage } from 'react-intl';
 import { HotKeys } from 'react-hotkeys';
 import { throttle } from 'lodash';
 import isArray from 'lodash/isArray';
-import { Icon, Checkbox, Form, Input, Select, Radio } from 'antd';
+import { Icon, Checkbox, Form, Input, Select, Radio } from 'antd'; import * as ReactIcon from 'react-icons/lib/md';
 import Dropzone from 'react-dropzone';
 import EditorToolbar from './EditorToolbar';
+import * as EditorTemplates from './templates';
 import Action from '../Button/Action';
 import Body, { remarkable } from '../Story/Body';
 import Autocomplete from 'react-autocomplete';
+import SimilarPosts from './SimilarPosts';
+import 'mdi/css/materialdesignicons.min.css';
 import './Editor.less';
 
-import CategoryIcon from '../CategoriesIcons';
-import { getProjects, setProjects } from '../../actions/projects';
+import { getGithubRepos, setGithubRepos } from '../../actions/projects';
 const RadioGroup = Radio.Group;
 const Option = Select.Option;
 
 // @UTOPIAN
+import { Rules } from '../Rules';
 import { getPullRequests } from '../../actions/pullRequests';
 
 
 @connect(
   state => ({
-    projects: state.projects,
+    repos: state.repos,
   }),
-  { getProjects,
-    setProjects,
+  { getGithubRepos,
+    setGithubRepos,
     getPullRequests,
   },
 )
@@ -41,6 +44,7 @@ class Editor extends React.Component {
     repository: PropTypes.object,
     title: PropTypes.string,
     topics: PropTypes.arrayOf(PropTypes.string),
+    reward: PropTypes.string,
     body: PropTypes.string,
     type: PropTypes.string,
     loading: PropTypes.bool,
@@ -56,6 +60,7 @@ class Editor extends React.Component {
     title: '',
     repository: null,
     topics: [],
+    reward: '50',
     type: 'ideas',
     body: '',
     recentTopics: [],
@@ -125,10 +130,39 @@ class Editor extends React.Component {
         selectInput.setAttribute('autocapitalize', 'none');
       }
     }
+
+    const removeChat = () => {
+        if (document.getElementsByClassName("cometchat_ccmobiletab_redirect") && document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0]) {
+          if (document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0].classList) {
+            if (!document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0].classList.contains("Component__block")) {
+              document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0].classList.add("Component__block");
+              console.log("Blocking Chat");
+            }
+          }
+        }
+    }
+    removeChat();
+    setTimeout(removeChat, 2000);
+    setTimeout(removeChat, 2500);
+    setTimeout(removeChat, 4000);
+  }
+
+
+  
+
+  componentWillUnmount() {
+    if (document.getElementsByClassName("cometchat_ccmobiletab_redirect") && document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0]) {
+      if (document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0].classList) {
+        if (document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0].classList.contains("Component__block")) {
+          document.getElementsByClassName("cometchat_ccmobiletab_redirect")[0].classList.remove("Component__block");
+          console.log("Unblocking Chat");
+        }
+      }
+    }
   }
 
   componentWillReceiveProps(nextProps) {
-    const { title, topics, body, type, user, getPullRequests, repository } = this.props;
+    const { title, topics, body, type, user, getPullRequests, repository, reward } = this.props;
     const chosenType = this.state.currentType || type || 'ideas';
 
     const getPulls = () => {
@@ -151,7 +185,9 @@ class Editor extends React.Component {
 
     if (nextProps.repository !== nextProps.repository && user && user.github ||
       nextProps.user !== user && nextProps.user.github !== user.github &&
-      (chosenType === 'development' || chosenType === 'documentation')) {
+      (chosenType === 'development' || chosenType === 'documentation' || chosenType === 'copywriting') &&
+      (nextProps.repository && nextProps.repository.full_name))
+    {
       getPulls();
     }
 
@@ -164,6 +200,7 @@ class Editor extends React.Component {
     if (
       title !== nextProps.title ||
       topics !== nextProps.topics ||
+      reward !== nextProps.reward ||
       body !== nextProps.body ||
       type !== nextProps.type
     ) {
@@ -190,6 +227,16 @@ class Editor extends React.Component {
     }
   };
 
+  handleChangeCategory = (e) => {
+    const { isUpdating } = this.props;
+    if (!isUpdating) {
+      const values = this.getValues(e);
+      this.input.value = this.setDefaultTemplate(values.type);
+      this.renderMarkdown(this.input.value)
+      this.resizeTextarea();
+    }
+  }
+
   setInput = (input) => {
     if (input && input.refs && input.refs.input) {
       this.originalInput = input.refs.input;
@@ -198,14 +245,20 @@ class Editor extends React.Component {
     }
   };
 
+  setDefaultTemplate = (type) => {
+    const sanitisedType = type.replace('-', '');
+    return EditorTemplates[sanitisedType]();
+  }
+
   setValues = (post) => {
     this.props.form.setFieldsValue({
       title: post.title,
       // @UTOPIAN filtering out utopian-io since it's always added/re-added when posting
       topics: post.topics.filter(topic => topic !== process.env.UTOPIAN_CATEGORY),
+      reward: post.reward,
       type: post.type || 'ideas',
     });
-    if (this.input) {
+    if (this.input && post.body !== '') {
       this.input.value = post.body;
       this.renderMarkdown(this.input.value);
       this.resizeTextarea();
@@ -218,7 +271,7 @@ class Editor extends React.Component {
     // (array or just value for Select, proxy event for inputs and checkboxes)
 
     const values = {
-      ...this.props.form.getFieldsValue(['title', 'type', 'topics']),
+      ...this.props.form.getFieldsValue(['title', 'type', 'topics', 'reward']),
       body: this.input.value,
     };
 
@@ -227,6 +280,8 @@ class Editor extends React.Component {
 
     if (isArray(e)) {
       values.topics = e;
+    } else if (typeof e === 'string') {
+      values.reward = e;
     }else if (e.target.type === 'textarea') {
       values.body = e.target.value;
     } else if (e.target.type === 'text') {
@@ -239,6 +294,12 @@ class Editor extends React.Component {
 
     return values;
   };
+
+  setInputCursorPosition = (pos) => {
+    if (this.input && this.input.setSelectionRange) {
+      this.input.setSelectionRange(pos, pos);
+    }
+  }
 
   resizeTextarea = () => {
     if (this.originalInput) this.originalInput.resizeTextarea();
@@ -401,13 +462,14 @@ class Editor extends React.Component {
 
     const startPos = this.input.selectionStart;
     const endPos = this.input.selectionEnd;
+    const imageText = `![${imageName}](${image})\n`;
     this.input.value = `${this.input.value.substring(
       0,
       startPos,
-    )}![${imageName}](${image})${this.input.value.substring(endPos, this.input.value.length)}\n`;
-
+    )}${imageText}${this.input.value.substring(endPos, this.input.value.length)}`;
     this.resizeTextarea();
     this.renderMarkdown(this.input.value);
+    this.setInputCursorPosition(startPos + imageText.length);
     this.onUpdate();
   };
 
@@ -483,146 +545,9 @@ class Editor extends React.Component {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    const { intl, loading, isUpdating, isReviewed, type, saving, getProjects, projects, setProjects, user, getPullRequests, pullRequests } = this.props;
+    const { intl, loading, isUpdating, isReviewed, type, saving, getGithubRepos, repos, setGithubRepos, user, getPullRequests, pullRequests, parsedPostData } = this.props;
 
     const chosenType = this.state.currentType || type || 'ideas';
-
-    const AcceptRules = () => (
-      <Action
-        className="accept-rules-btn"
-        primary
-        text='I understand. Proceed'
-        onClick={e => {
-          e.preventDefault();
-          this.setState({rulesAccepted: true});
-        }}
-      />
-    );
-
-    const Rules = () => {
-      switch(chosenType) {
-        case 'ideas':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="ideas"/> Idea/Feature Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>Ideas are features that you would like to have in an Open Source project.</li>
-                <li>Ideas must provide great details for the features to be actually built.</li>
-                <li>Images, screenshots, links and examples are always necessary in this category.</li>
-                <li>Never write about ideas you have already shared before or ideas already shared by someone else.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-        case 'development':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="development"/> Development Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>In this category you can only write if you have developed or contributed to the development.</li>
-                <li>You must provide the links to the branches/forks/gists/pull requests.</li>
-                <li>Images, screenshots, links and examples are not necessary but preferred.</li>
-                <li>Never write about code contributions you have already shared before.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-        case 'bug-hunting':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="bug-hunting"/> Bug Hunting Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>In this category you can only report bugs you have found in an Open Source project.</li>
-                <li>You must provide every possible detail to reproduce the bug.</li>
-                <li>You must include for example browsers used, devices, operating systems and similar.</li>
-                <li>Never write about bugs you have already shared before or someone else have already reported before.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-        case 'translations':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="translations"/> Translations Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>You must provide your translated text directly on this post or include public links.</li>
-                <li>This category is meant only for translations you have updated or created for an Open Source project.</li>
-                <li>You must include every possible detail to check the translations and the tools you have used to translate.</li>
-                <li>Never write about translations you have already shared before or someone else have already shared before.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-        case 'graphics':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="graphics"/> Graphics Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>You must provide samples of your creations directly on this post and include public links to the full design.</li>
-                <li>This category is meant only for graphics you have designed for an Open Source project.</li>
-                <li>You must include every possible detail to check the creations and the tools you have used to create them.</li>
-                <li>Never write about graphics you have already shared before or someone else have already shared before.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-        case 'documentation':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="documentation"/> Documentation Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>This category is meant only for providing documentation about an Open Source project.</li>
-                <li>Documentation can be in any language. You must be the author of the documentation.</li>
-                <li>If you are not pasting the entire documentation here you must provide public links to it.</li>
-                <li>Never write about documentations you have already shared before or someone else have already shared before.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-        case 'analysis':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="analysis"/> Analysis Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>This category is meant only for providing analysis you have generated for an Open Source project.</li>
-                <li>You must include the results of your analyses and the reasons why you have generated them.</li>
-                <li>If you are not pasting the entire analysis here you must provide public links to it.</li>
-                <li>Never write about analyses you have already shared before or someone else have already shared before.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-        case 'social':
-          return (
-            <div className="Editor__rules">
-              <h2><CategoryIcon type="analysis"/> Visibility Rules</h2>
-              <p><small><a href="https://utopian.io/rules" target="_blank">Read all the rules</a></small></p>
-              <ul>
-                <li>This category is meant only for providing results of social engagement, adv and similar for an Open Source project.</li>
-                <li>You must include links and proofs of the visibility effort you made and write down the results.</li>
-                <li>If your effort brought few or 0 new users/contributors to the Open Source project you are invited to not write about it.</li>
-                <li>Never write about visibility efforts you have already shared before or someone else have already shared before.</li>
-              </ul>
-              <p>Not respecting the rules will either give you lower votes or your contribution won't be accepted.</p>
-              <AcceptRules />
-            </div>
-          )
-      }
-    };
 
     return (
       <Form className="Editor" layout="vertical" onSubmit={this.handleSubmit}>
@@ -635,11 +560,14 @@ class Editor extends React.Component {
         >
           <div className="Editor__category">
             {getFieldDecorator('type')(
-              <RadioGroup onChange={this.onUpdate}>
+              <RadioGroup onChange={(e) => {
+                this.onUpdate(e);
+                this.handleChangeCategory(e);
+              }}>
                 <label>
                   <Radio value="ideas" name="type" disabled={isReviewed}/>
                   <div className={`ideas box`}>
-                    <span>Idea/Feature</span>
+                    <span>Suggestion</span>
                   </div>
                 </label>
                 <label>
@@ -667,12 +595,6 @@ class Editor extends React.Component {
                   </div>
                 </label>
                 <label>
-                  <Radio value="documentation" name="type" disabled={isReviewed}/>
-                  <div className={`documentation box`}>
-                    <span>Documentation</span>
-                  </div>
-                </label>
-                <label>
                   <Radio value="analysis" name="type" disabled={isReviewed}/>
                   <div className={`analysis box`}>
                     <span>Analysis</span>
@@ -684,15 +606,48 @@ class Editor extends React.Component {
                     <span>Visibility</span>
                   </div>
                 </label>
+                <label>
+                  <Radio value="documentation" name="type" disabled={isReviewed}/>
+                  <div className={`documentation box`}>
+                    <span>Documentation</span>
+                  </div>
+                </label>
+                <label>
+                  <Radio value="tutorials" name="type" disabled={isReviewed}/>
+                  <div className={`tutorials box`}>
+                    <span>Tutorials</span>
+                  </div>
+                </label>
+                <label>
+                  <Radio value="video-tutorials" name="type" disabled={isReviewed}/>
+                  <div className={`video-tutorials box`}>
+                    <span>Video Tutorials</span>
+                  </div>
+                </label>
+                <label>
+                  <Radio value="copywriting" name="type" disabled={isReviewed}/>
+                  <div className={`copywriting box`}>
+                    <span>Copywriting</span>
+                  </div>
+                </label>
+                <label>
+                  <Radio value="blog" name="type" disabled={isReviewed}/>
+                  <div className={`blog box`}>
+                    <span>Blog Post</span>
+                  </div>
+                </label>
               </RadioGroup>
             )}
           </div>
         </Form.Item>
 
-        {!this.state.rulesAccepted && !isUpdating  ? <Rules /> : null}
+        {!this.state.rulesAccepted && !isUpdating  ? <Rules
+            inEditor={true}
+            type={chosenType}
+            acceptRules={() => this.setState({rulesAccepted: true})} />
+          : null}
 
         <div className={this.state.rulesAccepted || isUpdating ? 'rulesAccepted' : 'rulesNotAccepted'}>
-
           <Form.Item
             validateStatus={this.state.noRepository ? 'error' : ''}
             help={this.state.noRepository && "Please enter an existing Github repository"}
@@ -715,6 +670,7 @@ class Editor extends React.Component {
                   q = q.replace('https://', '');
                   q = q.replace('http://', '');
                   q = q.replace('github.com/', '');
+                  q = '"' + q + '"';
 
                   if (event.key === 'Enter') {
                     event.preventDefault();
@@ -722,10 +678,8 @@ class Editor extends React.Component {
                     this.setState({loading: true, loaded: false});
                     this.search.refs.input.click();
 
-                    getProjects({
+                    getGithubRepos({
                       q,
-                      sort: 'stars',
-                      order: 'desc',
                     }).then(() => {
                       this.setState({loaded: true, loading: false});
                       this.search.refs.input.click();
@@ -738,61 +692,60 @@ class Editor extends React.Component {
                     let q = pasted.replace('https://', '');
                     q = q.replace('http://', '');
                     q = q.replace('github.com/', '');
+                    q = '"' + q + '"';
 
                     this.search.refs.input.click();
 
-                    getProjects(q).then(() => {
+                    getGithubRepos(q).then(() => {
                       this.setState({loaded: true, loading: false});
                       this.search.refs.input.click();
                     });
                   }
                 },
               }}
-              items={ projects }
-              getItemValue={project => project.full_name}
-              onSelect={(value, project) => {
+              items={ repos }
+              getItemValue={repo => repo.full_name}
+              onSelect={(value, repo) => {
                 const update = () => {
                   this.setState({
-                    value: project.full_name,
-                    repository: project,
+                    value: repo.full_name,
+                    repository: repo,
                   });
-                  this.onUpdate(project, 'repository');
+                  this.onUpdate(repo, 'repository');
                 };
 
-                if (user.github && !isReviewed && (chosenType === 'development' || chosenType === 'documentation')) {
-                  getPullRequests(project.full_name).then(res => {
+                if (user.github && !isReviewed && (chosenType === 'development' || chosenType === 'documentation' || chosenType === 'copywriting')) {
+                  getPullRequests(repo.full_name).then(res => {
                     if (res.response && res.response.length > 0) {
                       const prs = res.response.filter(pr => pr.user.login === user.github.account);
                       this.setState({
                         availablePullRequests: prs
                       });
-                      update();
                     }
                   });
-                } else {
-                  update();
                 }
+                update();
               }}
               onChange={(event, value) => {
                 this.setState({value});
 
                 if (value === '') {
-                  setProjects([]);
+                  setGithubRepos([]);
                   this.setState({loaded: false, repository: null});
                 }
 
               }}
-              renderItem={(project, isHighlighted) => (
+              renderItem={(repo, isHighlighted) => (
                 <div
                   className='Topnav__search-item'
-                  key={project.full_name}
+                  key={repo.full_name}
                 >
-                  <span><Icon type='github' /> <b>{project.full_name}</b></span>
-                  <span>{project.html_url}</span>
+                  <span><Icon type='github' /> <b>{repo.full_name}</b></span>
+                  <span>{repo.html_url}</span>
                 </div>
               )}
               renderMenu={(items, value) => (
-                <div className="Topnav__search-menu">
+                <div className="Topnav__search-menu-reg">
                   <div>
                     {items.length === 0 && !this.state.loaded && !this.state.loading && <div className="Topnav__search-tip"><b>Press enter to see results</b></div>}
                     {items.length === 0 && this.state.loaded && <div className="Topnav__search-tip">No projects found</div>}
@@ -805,7 +758,7 @@ class Editor extends React.Component {
           </Form.Item>
 
 
-          {(chosenType === 'development' || chosenType === 'documentation') &&
+          {(chosenType === 'development' || chosenType === 'documentation' || chosenType === 'copywriting') &&
           user.github &&
           (this.state.availablePullRequests.length > 0 || pullRequests.length > 0) ?
             <Form.Item
@@ -835,7 +788,7 @@ class Editor extends React.Component {
           <Form.Item
             label={
               <span className="Editor__label">
-              Contribution title
+            Contribution title
             </span>
             }
           >
@@ -895,6 +848,7 @@ class Editor extends React.Component {
                       id: 'story_placeholder',
                       defaultMessage: 'Write your story...',
                     })}
+                    defaultValue={this.setDefaultTemplate('ideas')}
                   />
                 </HotKeys>
               </Dropzone>
@@ -960,6 +914,28 @@ class Editor extends React.Component {
               />,
             )}
           </Form.Item>
+          <Form.Item
+            className={classNames({ Editor__hidden: isUpdating })}
+            label={
+              <span className="Editor__label">
+              Reward
+            </span>
+            }
+          >
+            {getFieldDecorator('reward', { initialValue: '50' })(
+              <Select onChange={this.onUpdate} disabled={isUpdating}>
+                <Select.Option value="100">
+                  100% Steem Power
+                </Select.Option>
+                <Select.Option value="50">
+                  50% SBD and 50% SP
+                </Select.Option>
+              </Select>,
+            )}
+          </Form.Item>
+
+          <SimilarPosts data={parsedPostData} />
+
           <div className="Editor__bottom">
               <span className="Editor__bottom__info">
               <i className="iconfont icon-markdown" />{' '}
@@ -992,7 +968,7 @@ class Editor extends React.Component {
                       disabled={loading}
                       text={intl.formatMessage({
                         id: loading ? 'post_send_progress' : 'post_send',
-                        defaultMessage: loading ? 'Submitting' : 'Post',
+                        defaultMessage: loading ? 'Submitting' : 'Submit Contribution',
                       })}
                     />
                   )}

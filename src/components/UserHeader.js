@@ -8,6 +8,8 @@ import Avatar from './Avatar';
 import FollowButton from '../widgets/FollowButton';
 import Action from './Button/Action';
 import PopoverMenu, { PopoverMenuItem } from './PopoverMenu/PopoverMenu';
+import getImage from '../helpers/getImage';
+import { getUserRankKey, getUserRank } from '../helpers/user';
 import './UserHeader.less';
 
 const UserHeader = ({
@@ -20,10 +22,12 @@ const UserHeader = ({
   isSameUser,
   hasCover,
   onSelect,
+  isPopoverVisible,
+  handleVisibleChange,
 }) =>
   (<div
     className={classNames('UserHeader', { 'UserHeader--cover': hasCover })}
-    style={{ backgroundImage: `url("${process.env.STEEMCONNECT_IMG_HOST}/@${handle}/cover")` }}
+    style={{ backgroundImage: `url("${getImage(`@${handle}/cover`)}")` }}
   >
     <div className="UserHeader__container">
       <Avatar username={handle} size={100} />
@@ -41,27 +45,31 @@ const UserHeader = ({
             {authenticated &&
               (isSameUser
                 ? <a target="_blank" rel="noopener noreferrer" href={`https://steemit.com/@${handle}/settings`}>
-                  <Action small text={intl.formatMessage({ id: 'edit_profile', defaultMessage: 'Edit profile' })} />
+                  <Action small text={<span>Edit profile</span>} />
                 </a>
                 : <FollowButton username={handle} />)
             }
           </div>
-          <Popover
-            placement="bottom"
-            trigger="click"
-            content={
-              <PopoverMenu onSelect={onSelect}>
-                <PopoverMenuItem key="transfer">
-                  <FormattedMessage id="support" defaultMessage="Support" />
-                </PopoverMenuItem>
-                <PopoverMenuItem key="mute">
-                  <FormattedMessage id="block_user" defaultMessage="Block this user" />
-                </PopoverMenuItem>
-              </PopoverMenu>
-            }
-          >
-            <i className="iconfont icon-more UserHeader__more" />
-          </Popover>
+          {!isSameUser && (
+            <Popover
+              placement="bottom"
+              trigger="click"
+              visible={isPopoverVisible}
+              onVisibleChange={handleVisibleChange}
+              content={
+                <PopoverMenu onSelect={onSelect}>
+                  <PopoverMenuItem key="transfer">
+                    <FormattedMessage id="transfer" defaultMessage="Transfer" />
+                  </PopoverMenuItem>
+                  <PopoverMenuItem key="mute">
+                    <FormattedMessage id="block_user" defaultMessage="Block this user" />
+                  </PopoverMenuItem>
+                </PopoverMenu>
+              }
+            >
+              <i className="iconfont icon-more UserHeader__more" />
+            </Popover>
+          )}
         </div>
         <div className="UserHeader__row UserHeader__handle">
           @{handle}
@@ -86,6 +94,8 @@ UserHeader.propTypes = {
   isSameUser: PropTypes.bool,
   hasCover: PropTypes.bool,
   onSelect: PropTypes.func,
+  isPopoverVisible: PropTypes.bool,
+  handleVisibleChange: PropTypes.func,
 };
 
 UserHeader.defaultProps = {
@@ -96,6 +106,8 @@ UserHeader.defaultProps = {
   isSameUser: false,
   hasCover: false,
   onSelect: () => {},
+  isPopoverVisible: false,
+  handleVisibleChange: () => {},
 };
 
 export default injectIntl(UserHeader);

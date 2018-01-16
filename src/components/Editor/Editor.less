@@ -17,7 +17,14 @@
 
     @media screen and (max-width: 736px) {
       .ant-radio-group {
-        justify-content: space-around;
+        justify-content: flex-start;
+
+        .box {
+          width: 120px;
+          height: 120px;
+          margin: 10px;
+          font-size: 12px;
+        }
       }
     }
 
@@ -28,6 +35,9 @@
     .ant-radio-wrapper-checked{
       + .box.ideas{
         background-color: @bg-ideas;
+      }
+      + .box.sub-projects{
+        background-color: @bg-sub-projects;
       }
       + .box.development{
         background-color: @bg-development;
@@ -41,21 +51,26 @@
       + .box.graphics{
         background-color: @bg-graphics;
       }
-      + .box.documentation{
-        span {
-          color: @black;
-          &:before {
-            color: @black;
-          }
-        }
-        border: 1px solid #999;
-        background-color: @bg-documentation;
-      }
       + .box.analysis{
         background-color: @bg-analysis;
       }
       + .box.social{
         background-color: @bg-social;
+      }
+      + .box.documentation{
+        background-color: @bg-documentation;
+      }
+      + .box.tutorials{
+        background-color: @bg-tutorials;
+      }
+      + .box.video-tutorials{
+        background-color: @bg-video-tutorials;
+      }
+      + .box.copywriting{
+        background-color: @bg-copywriting;
+      }
+      + .box.blog{
+        background-color: @bg-blog;
       }
       + .box {
         position: relative;
@@ -100,7 +115,7 @@
         color: #CCC;
         &:before {
           font-size: 1.5em;
-          font-family: 'anticon';
+          font-family: "Material Design Icons";
           display: block;
           transform: translateY(-10px);
           opacity: 10;
@@ -114,6 +129,13 @@
       span {
         &:before {
           content: @icon-ideas;
+        }
+      }
+    }
+    .sub-projects {
+      span {
+        &:before {
+          content: @icon-sub-projects;
         }
       }
     }
@@ -145,13 +167,6 @@
         }
       }
     }
-    .documentation {
-      span {
-        &:before {
-          content: @icon-documentation;
-        }
-      }
-    }
     .analysis {
       span {
         &:before {
@@ -166,6 +181,41 @@
         }
       }
     }
+    .documentation {
+      span {
+        &:before {
+          content: @icon-documentation;
+        }
+      }
+    }
+    .tutorials {
+      span {
+        &:before {
+          content: @icon-tutorials;
+        }
+      }
+    }
+    .video-tutorials {
+      span {
+        &:before {
+          content: @icon-video-tutorials;
+        }
+      }
+    }
+    .copywriting {
+      span {
+        &:before {
+          content: @icon-copywriting;
+        }
+      }
+    }
+    .blog {
+      span {
+        &:before {
+          content: @icon-blog;
+        }
+      }
+    }
   }
 
   &__rules {
@@ -176,6 +226,7 @@
       padding-left: 30px;
       padding-bottom: 15px;
       list-style: disc;
+      list-style-position: inside;
       li {
         margin-top: 15px;
       }
