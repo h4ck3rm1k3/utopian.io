@@ -7,6 +7,7 @@ import * as querystring from 'querystring';
 import { createUser } from '../actions/user';
 
 import GithubBtn from '../components/Button/Github';
+import Cookie from 'js-cookie';
 
 import './GithubConnect.less';
 
@@ -47,9 +48,16 @@ export default class GithubConnect extends React.Component {
       createUser(user.name, code, state).then(res => {
         this.setState({userCreated: true});
         if (res.response && res.response.account) {
+
+          if (state.indexOf('github') > -1) {
+            console.log(res)
+            window.location.href = `${state}?access_token=${res.response.github.token}`;
+            return;
+          }
+
           this.setState({fullSuccess: true});
+
           history.push(`/@${user.name}/projects`);
-          return;
         } else {
           this.setState({
             somethingWrong: true

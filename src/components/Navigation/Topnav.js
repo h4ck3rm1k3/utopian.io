@@ -19,6 +19,10 @@ import PopoverMenu, { PopoverMenuItem } from '../PopoverMenu/PopoverMenu';
 import CategoryIcon from '../CategoriesIcons';
 import './Topnav.less';
 
+
+// @UTOPIAN
+import { authCodeFlow } from '../../helpers/authCodeFlow';
+
 const InputGroup = Input.Group;
 const Option = Select.Option;
 
@@ -322,9 +326,15 @@ class Topnav extends React.Component {
             <Menu.Item key="divider" className="UWhite" disabled>
               |
             </Menu.Item>
+
+            <Menu.Item key="login">
+              <a href={authCodeFlow(next)}>
+                <FormattedMessage id="login" defaultMessage="Log in"/>
+
             <Menu.Item className="UWhite" key="login">
               <a href={sc2.getLoginUrl(next)} className="UWhite">
                 <FormattedMessage id="login" className="UWhite" defaultMessage="Log in"/>
+
               </a>
             </Menu.Item>
           </Menu>

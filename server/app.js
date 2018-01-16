@@ -21,6 +21,9 @@ const https = require('https');
 const debug = require('debug')('busy:serverApp');
 const steem = require('steem');
 
+// @UTOPIAN
+const request = require('superagent');
+
 http.globalAgent.maxSockets = Infinity;
 https.globalAgent.maxSockets = Infinity;
 
@@ -152,6 +155,7 @@ function serverSideResponse(req, res) {
 
 app.get('/callback', authCallback({ sendCookie: true }));
 app.get('/connect', authCallback({ allowAnyRedirect: true }));
+
 
 app.get('/trending(/:category)', serverSideResponse);
 app.get('/hot(/:category)', serverSideResponse);

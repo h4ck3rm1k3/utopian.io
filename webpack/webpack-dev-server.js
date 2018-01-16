@@ -40,10 +40,14 @@ module.exports = {
         IMG_HOST: JSON.stringify(process.env.IMG_HOST || 'https://img.busy.org'),
         SENTRY_PUBLIC_DSN: null,
         STEEMCONNECT_HOST: JSON.stringify(process.env.STEEMCONNECT_HOST || 'https://v2.steemconnect.com'),
-        STEEMCONNECT_REDIRECT_URL: JSON.stringify(STEEMCONNECT_REDIRECT_URL),
-        STEEM_NODE: JSON.stringify(process.env.STEEM_NODE || 'https://api.steemit.com'),
+
+        STEEMCONNECT_REDIRECT_URL: JSON.stringify(process.env.STEEMCONNECT_REDIRECT_URL || 'http://localhost:3000/callback'),
+        STEEM_NODE: JSON.stringify(process.env.STEEM_NODE || 'wss://steemd.privex.io'),
+        UTOPIAN_STEEMCONNECT_SECRET: JSON.stringify(process.env.UTOPIAN_STEEMCONNECT_SECRET),
+                
         SERVER_SSL_CERT: JSON.stringify(process.env.SERVER_SSL_CERT),
         SERVER_SSL_KEY: JSON.stringify(process.env.SERVER_SSL_KEY),
+
         UTOPIAN_STEEM_ACCOUNT: JSON.stringify(process.env.UTOPIAN_STEEM_ACCOUNT || 'utopian-io'),
         UTOPIAN_CATEGORY: JSON.stringify(process.env.UTOPIAN_CATEGORY || 'test-category'),
         UTOPIAN_LANDING_URL: JSON.stringify(process.env.UTOPIAN_LANDING_URL),

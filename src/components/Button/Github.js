@@ -23,8 +23,14 @@ const GithubBtn = ({ disconnect, tooltipTitle }) => (
         disconnect();
       }
     }}
+
+  >
+    <Icon type="github" /> {!disconnect ? 'Sync with Github' : 'Disconnect Github' }
+  </button>
+
   />
   </span>
+
 );
 
 export default GithubBtn
